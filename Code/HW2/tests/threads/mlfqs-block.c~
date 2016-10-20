@@ -22,7 +22,7 @@ static void block_thread (void *lock_);
 void
 test_mlfqs_block (void) 
 {
-	/*
+
   int64_t start_time;
   struct lock lock;
   
@@ -45,7 +45,6 @@ test_mlfqs_block (void)
   lock_release (&lock);
 
   msg ("Block thread should have already acquired lock.");
-	*/
 }
 
 static void

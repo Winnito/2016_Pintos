@@ -356,53 +356,57 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-		list_insert_ordered(&ready_list,&cur->elem,cmp_priority,0); 
+		list_insert_ordered(&ready_list,&cur->elem,cmp_priority,0); /* insert order by priorirty */
 	cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
 }
 
+/* Make thread block and push sleep list func */
 void thread_sleep(int64_t ticks) 
 {
 	struct thread *t = thread_current();
 	
-	intr_disable();	
+	intr_disable();															/* change interrupt disable */
 	if(t != idle_thread)
 	{		
 		t->wakeup_tick = ticks;
-		list_push_back(&sleep_list,&t->elem);			
-		update_next_tick_to_awake(ticks);
+		list_push_back(&sleep_list,&t->elem);			/* push sleep list */
+		update_next_tick_to_awake(ticks);					/* compare next_tick to ticks */ 
 		thread_block();		
 	}
-	intr_enable();
+	intr_enable();															/* change interrupt enable */
 }
 
+/* Make thread unblock and pop sleep list func */
 void thread_awake(int64_t ticks) 
 {
 	struct list_elem *e;
 		
-	for(e = list_begin(&sleep_list); e != list_end(&sleep_list); )
+	for(e = list_begin(&sleep_list); e != list_end(&sleep_list); )	/* all thread in sleep list */
 	{
-		struct thread *t = list_entry(e,struct thread,elem);
-		if(t->wakeup_tick <= ticks) 
+		struct thread *t = list_entry(e,struct thread,elem);					
+		if(t->wakeup_tick <= ticks) 																	/* wakeup condition */
 		{
-			e = list_remove(&t->elem);
+			e = list_remove(&t->elem);																	/* pop sleep list */
 			thread_unblock(t);
 		}
 		else 
 		{
 			e = list_next(e);	
-			update_next_tick_to_awake(t->wakeup_tick);	
+			update_next_tick_to_awake(t->wakeup_tick);									/* compare next_tick to wakeup_tick */
 		}
 	}
 }
 
+/* Set next_tick_to_awake func */
 void update_next_tick_to_awake(int64_t ticks) 
 {
-	if(ticks < next_tick_to_awake)
-		next_tick_to_awake = ticks; 
+	if(ticks < next_tick_to_awake)																	/* compare next_tick to ticks */
+		next_tick_to_awake = ticks; 					
 }
 
+/* return next_tick_to_awake func */
 int64_t get_next_tick_to_awake(void) 
 {
 	return next_tick_to_awake;
@@ -718,6 +722,7 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 
+/* Calculate priority by mlfqs_formula */
 void mlfqs_priority(struct thread *t)
 {	
 	if(t == idle_thread)
@@ -732,6 +737,7 @@ void mlfqs_priority(struct thread *t)
 	t->priority = fp_to_int(priority);
 }
 
+/* Calculate recent_cpu by mlfqs_formula */
 void mlfqs_recent_cpu(struct thread *t) 
 {
 	if(t == idle_thread)
@@ -744,6 +750,7 @@ void mlfqs_recent_cpu(struct thread *t)
 	t->recent_cpu = add_fp(mult_fp(div_fp(c1,c2),c3),c4);
 }
 
+/* Calculate the number of ready list and current_thread */
 int ready_count(void) 
 {
 	struct list_elem *e;
@@ -752,12 +759,13 @@ int ready_count(void)
 	for(e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e))
 		n++;
 	
-	if(thread_current() == idle_thread)
+	if(thread_current() == idle_thread)	
 		n -= 1;
 
 	return n + 1;
 }
 
+/* Calculate load_avg by mlfqs_formula */
 void mlfqs_load_avg(void) 
 {
 	int a1 = div_fp(int_to_fp(59),int_to_fp(60));
@@ -771,6 +779,7 @@ void mlfqs_load_avg(void)
 		load_avg = 0;
 }
 
+/* Increase recent_cpu by 1 */
 void mlfqs_increment(void) 
 {
 	if(thread_current() == idle_thread)
@@ -779,6 +788,7 @@ void mlfqs_increment(void)
 	thread_current()->recent_cpu = add_mixed(thread_current()->recent_cpu,1);
 }
 
+/* Calculate all thread by load_avg, recent_cpu, priority */
 void mlfqs_recalc(void)
 {
 	struct list_elem *e;
