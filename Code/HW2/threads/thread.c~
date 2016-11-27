@@ -800,6 +800,7 @@ void mlfqs_recalc(void)
 		
 		mlfqs_recent_cpu(t);
 		mlfqs_priority(t);		
+
 	}
 
 }
